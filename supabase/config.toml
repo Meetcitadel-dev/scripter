@@ -1,1 +1,4 @@
 project_id = "gqwlhnvlbuplvxjqflem"
+
+[functions.brainstorm]
+verify_jwt = false
