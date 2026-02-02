@@ -7,7 +7,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { InspirationPanel } from './InspirationPanel';
 import { PartEditor } from './PartEditor';
-import { ArrowLeft, Plus, Layers, FileText } from 'lucide-react';
+import { AIBrainstormPanel } from './AIBrainstormPanel';
+import { ArrowLeft, Plus, Layers, FileText, Sparkles } from 'lucide-react';
 
 interface ScriptEditorProps {
   script: Script;
@@ -31,6 +32,15 @@ export const ScriptEditor = ({
   onRemoveInspiration,
 }: ScriptEditorProps) => {
   const [title, setTitle] = useState(script.title);
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
+
+  // Get current script content for AI context
+  const getCurrentContent = () => {
+    if (script.isMultiPart) {
+      return script.parts?.map(p => `## ${p.title}\n${p.content}`).join('\n\n') || '';
+    }
+    return script.content || '';
+  };
 
   useEffect(() => {
     setTitle(script.title);
@@ -106,6 +116,16 @@ export const ScriptEditor = ({
                 {script.isMultiPart ? 'Multi-part' : 'Single'}
               </Label>
             </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAIPanelOpen(true)}
+              className="gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              AI Brainstorm
+            </Button>
           </div>
         </div>
       </header>
@@ -160,6 +180,13 @@ export const ScriptEditor = ({
           </div>
         )}
       </main>
+
+      {/* AI Brainstorm Panel */}
+      <AIBrainstormPanel
+        isOpen={isAIPanelOpen}
+        onClose={() => setIsAIPanelOpen(false)}
+        scriptContent={getCurrentContent()}
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Inspiration } from '@/types/script';
-import { Link2, Image, X, Plus, ExternalLink } from 'lucide-react';
+import { Link2, Image, X, Plus, ExternalLink, Upload, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,6 +11,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface InspirationPanelProps {
   inspirations: Inspiration[];
@@ -23,6 +25,8 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove }: InspirationP
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddLink = () => {
     if (linkUrl.trim()) {
@@ -38,6 +42,45 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove }: InspirationP
       onAdd({ type: 'image', url: imageUrl.trim() });
       setImageUrl('');
       setIsOpen(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `uploads/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('inspirations')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('inspirations')
+        .getPublicUrl(filePath);
+
+      onAdd({ type: 'image', url: publicUrl });
+      setIsOpen(false);
+      toast.success('Image uploaded successfully');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -108,11 +151,44 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove }: InspirationP
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
                 />
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-background px-2 text-muted-foreground">or</span>
+                  </div>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button 
+                  variant="outline" 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full"
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload from device
+                    </>
+                  )}
+                </Button>
                 <p className="text-xs text-muted-foreground">
                   You can also paste images directly anywhere on the editor
                 </p>
                 <Button onClick={handleAddImage} className="w-full" disabled={!imageUrl.trim()}>
-                  Add Image
+                  Add Image URL
                 </Button>
               </TabsContent>
             </Tabs>
