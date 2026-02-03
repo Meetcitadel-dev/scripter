@@ -13,6 +13,7 @@ interface PartEditorProps {
   onDelete: () => void;
   onAddInspiration: (inspiration: { type: 'link' | 'image'; url: string; title?: string }) => void;
   onRemoveInspiration: (inspirationId: string) => void;
+  scriptId?: string;
 }
 
 export const PartEditor = ({
@@ -23,6 +24,7 @@ export const PartEditor = ({
   onDelete,
   onAddInspiration,
   onRemoveInspiration,
+  scriptId,
 }: PartEditorProps) => {
   return (
     <div className="glass-card p-5 space-y-4 animate-slide-up">
@@ -67,6 +69,7 @@ export const PartEditor = ({
             inspirations={part.inspirations}
             onAdd={onAddInspiration}
             onRemove={onRemoveInspiration}
+            scriptId={scriptId}
           />
         </div>
       </div>

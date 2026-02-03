@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Inspiration } from '@/types/script';
-import { Link2, Image, X, Plus, ExternalLink, Upload, Loader2 } from 'lucide-react';
+import { Link2, Image, X, Plus, ExternalLink, Upload, Loader2, Grid3X3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,19 +13,22 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { MoodboardPanel } from './MoodboardPanel';
 
 interface InspirationPanelProps {
   inspirations: Inspiration[];
   onAdd: (inspiration: Omit<Inspiration, 'id'>) => void;
   onRemove: (id: string) => void;
+  scriptId?: string;
 }
 
-export const InspirationPanel = ({ inspirations, onAdd, onRemove }: InspirationPanelProps) => {
+export const InspirationPanel = ({ inspirations, onAdd, onRemove, scriptId }: InspirationPanelProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [showMoodboard, setShowMoodboard] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddLink = () => {
@@ -102,6 +105,13 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove }: InspirationP
     }
   };
 
+  const handleSelectFromMoodboard = (url: string) => {
+    onAdd({ type: 'image', url });
+    setShowMoodboard(false);
+    setIsOpen(false);
+    toast.success('Image added from moodboard');
+  };
+
   return (
     <div className="space-y-3" onPaste={handlePaste}>
       <div className="flex items-center justify-between">
@@ -113,85 +123,121 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove }: InspirationP
               Add
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Add Inspiration</DialogTitle>
             </DialogHeader>
-            <Tabs defaultValue="link" className="mt-4">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="link">
-                  <Link2 className="w-4 h-4 mr-2" />
-                  Link
-                </TabsTrigger>
-                <TabsTrigger value="image">
-                  <Image className="w-4 h-4 mr-2" />
-                  Image
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="link" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Paste URL..."
-                    value={linkUrl}
-                    onChange={(e) => setLinkUrl(e.target.value)}
-                  />
-                  <Input
-                    placeholder="Title (optional)"
-                    value={linkTitle}
-                    onChange={(e) => setLinkTitle(e.target.value)}
-                  />
-                </div>
-                <Button onClick={handleAddLink} className="w-full" disabled={!linkUrl.trim()}>
-                  Add Link
-                </Button>
-              </TabsContent>
-              <TabsContent value="image" className="space-y-4 mt-4">
-                <Input
-                  placeholder="Paste image URL..."
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                />
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-background px-2 text-muted-foreground">or</span>
-                  </div>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button 
-                  variant="outline" 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full"
-                  disabled={isUploading}
+            {showMoodboard ? (
+              <div className="space-y-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowMoodboard(false)}
+                  className="mb-2"
                 >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload from device
-                    </>
-                  )}
+                  ← Back to options
                 </Button>
-                <p className="text-xs text-muted-foreground">
-                  You can also paste images directly anywhere on the editor
-                </p>
-                <Button onClick={handleAddImage} className="w-full" disabled={!imageUrl.trim()}>
-                  Add Image URL
-                </Button>
-              </TabsContent>
-            </Tabs>
+                <div className="h-[400px] overflow-auto">
+                  <MoodboardPanel
+                    selectionMode
+                    onSelectImage={handleSelectFromMoodboard}
+                  />
+                </div>
+              </div>
+            ) : (
+              <Tabs defaultValue="link" className="mt-4">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="link">
+                    <Link2 className="w-4 h-4 mr-2" />
+                    Link
+                  </TabsTrigger>
+                  <TabsTrigger value="image">
+                    <Image className="w-4 h-4 mr-2" />
+                    Image
+                  </TabsTrigger>
+                  <TabsTrigger value="moodboard">
+                    <Grid3X3 className="w-4 h-4 mr-2" />
+                    Moodboard
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="link" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Paste URL..."
+                      value={linkUrl}
+                      onChange={(e) => setLinkUrl(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Title (optional)"
+                      value={linkTitle}
+                      onChange={(e) => setLinkTitle(e.target.value)}
+                    />
+                  </div>
+                  <Button onClick={handleAddLink} className="w-full" disabled={!linkUrl.trim()}>
+                    Add Link
+                  </Button>
+                </TabsContent>
+                <TabsContent value="image" className="space-y-4 mt-4">
+                  <Input
+                    placeholder="Paste image URL..."
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                  />
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-background px-2 text-muted-foreground">or</span>
+                    </div>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full"
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload from device
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    You can also paste images directly anywhere on the editor
+                  </p>
+                  <Button onClick={handleAddImage} className="w-full" disabled={!imageUrl.trim()}>
+                    Add Image URL
+                  </Button>
+                </TabsContent>
+                <TabsContent value="moodboard" className="space-y-4 mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Select an image from your general moodboard
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowMoodboard(true)}
+                    className="w-full"
+                  >
+                    <Grid3X3 className="w-4 h-4 mr-2" />
+                    Open Moodboard
+                  </Button>
+                </TabsContent>
+              </Tabs>
+            )}
           </DialogContent>
         </Dialog>
       </div>
