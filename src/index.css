@@ -15,7 +15,7 @@
     --popover: 0 0% 7%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 211 100% 50%;
+    --primary: 142 76% 45%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 12%;
@@ -32,26 +32,26 @@
 
     --border: 0 0% 18%;
     --input: 0 0% 18%;
-    --ring: 211 100% 50%;
+    --ring: 142 76% 45%;
 
     --radius: 0.75rem;
 
     /* Custom tokens */
     --glass: 0 0% 10% / 0.6;
     --glass-border: 0 0% 100% / 0.08;
-    --glow-primary: 211 100% 50% / 0.15;
+    --glow-primary: 142 76% 45% / 0.15;
     --surface-elevated: 0 0% 10%;
     --surface-hover: 0 0% 13%;
     --text-tertiary: 0 0% 45%;
     
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 211 100% 50%;
+    --sidebar-primary: 142 76% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 12%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 211 100% 50%;
+    --sidebar-ring: 142 76% 45%;
   }
 }
 

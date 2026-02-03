@@ -23,4 +23,18 @@ export interface Script {
   inspirations?: Inspiration[];
   // For multi-part mode
   parts?: ScriptPart[];
+  // Preserved multi-part state when switching to single mode
+  preservedParts?: ScriptPart[];
+  // Soundtrack for the script
+  soundtrackUrl?: string;
+  soundtrackName?: string;
+  // Project-specific moodboard images
+  moodboard?: string[];
+}
+
+// Moodboard image type for the general moodboard
+export interface MoodboardImage {
+  id: string;
+  url: string;
+  createdAt: Date;
 }

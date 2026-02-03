@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { InspirationPanel } from './InspirationPanel';
 import { PartEditor } from './PartEditor';
 import { AIBrainstormPanel } from './AIBrainstormPanel';
+import { SoundtrackPlayer } from './SoundtrackPlayer';
+import { ProjectMoodboard } from './ProjectMoodboard';
 import { ArrowLeft, Plus, Layers, FileText, Sparkles } from 'lucide-react';
 
 interface ScriptEditorProps {
@@ -54,29 +56,53 @@ export const ScriptEditor = ({
 
   const toggleMode = () => {
     if (script.isMultiPart) {
-      // Converting to single mode - merge all parts
+      // Converting to single mode - preserve parts for later restoration
       const mergedContent = script.parts?.map(p => p.content).join('\n\n') || '';
       const mergedInspirations = script.parts?.flatMap(p => p.inspirations) || [];
       onUpdate({
         isMultiPart: false,
         content: mergedContent,
         inspirations: mergedInspirations,
-        parts: undefined,
+        preservedParts: script.parts, // Preserve the original parts
       });
     } else {
-      // Converting to multi-part mode
-      onUpdate({
-        isMultiPart: true,
-        parts: [{
-          id: Math.random().toString(36).substring(2, 15),
-          title: 'Part 1',
-          content: script.content || '',
-          inspirations: script.inspirations || [],
-        }],
-        content: undefined,
-        inspirations: undefined,
-      });
+      // Converting to multi-part mode - check for preserved parts first
+      if (script.preservedParts && script.preservedParts.length > 0) {
+        // Restore the preserved parts
+        onUpdate({
+          isMultiPart: true,
+          parts: script.preservedParts,
+          content: undefined,
+          inspirations: undefined,
+          preservedParts: undefined,
+        });
+      } else {
+        // No preserved parts, create new part from current content
+        onUpdate({
+          isMultiPart: true,
+          parts: [{
+            id: Math.random().toString(36).substring(2, 15),
+            title: 'Part 1',
+            content: script.content || '',
+            inspirations: script.inspirations || [],
+          }],
+          content: undefined,
+          inspirations: undefined,
+        });
+      }
     }
+  };
+
+  const handleSoundtrackUpdate = (url: string | undefined, name: string | undefined) => {
+    onUpdate({ soundtrackUrl: url, soundtrackName: name });
+  };
+
+  const handleMoodboardAdd = (url: string) => {
+    onUpdate({ moodboard: [...(script.moodboard || []), url] });
+  };
+
+  const handleMoodboardRemove = (url: string) => {
+    onUpdate({ moodboard: (script.moodboard || []).filter(u => u !== url) });
   };
 
   return (
@@ -127,11 +153,31 @@ export const ScriptEditor = ({
               AI Brainstorm
             </Button>
           </div>
+
+          {/* Soundtrack Player */}
+          <div className="mt-3">
+            <SoundtrackPlayer
+              scriptId={script.id}
+              soundtrackUrl={script.soundtrackUrl}
+              soundtrackName={script.soundtrackName}
+              onUpdate={handleSoundtrackUpdate}
+            />
+          </div>
         </div>
       </header>
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-6 py-8">
+        {/* Project Moodboard */}
+        <div className="mb-6">
+          <ProjectMoodboard
+            scriptId={script.id}
+            images={script.moodboard || []}
+            onAddImage={handleMoodboardAdd}
+            onRemoveImage={handleMoodboardRemove}
+          />
+        </div>
+
         {script.isMultiPart ? (
           <div className="space-y-6">
             {script.parts?.map((part, index) => (
@@ -144,6 +190,7 @@ export const ScriptEditor = ({
                 onDelete={() => onDeletePart(part.id)}
                 onAddInspiration={(insp) => onAddInspiration(insp, part.id)}
                 onRemoveInspiration={(id) => onRemoveInspiration(id, part.id)}
+                scriptId={script.id}
               />
             ))}
             
@@ -174,6 +221,7 @@ export const ScriptEditor = ({
                   inspirations={script.inspirations || []}
                   onAdd={(insp) => onAddInspiration(insp)}
                   onRemove={(id) => onRemoveInspiration(id)}
+                  scriptId={script.id}
                 />
               </div>
             </div>

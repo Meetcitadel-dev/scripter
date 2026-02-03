@@ -43,6 +43,7 @@ export const useScripts = () => {
         content: '',
         inspirations: [],
       }] : undefined,
+      moodboard: [],
     };
     setScripts(prev => [newScript, ...prev]);
     return newScript;

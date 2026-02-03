@@ -3,8 +3,12 @@ import { useScripts } from '@/hooks/useScripts';
 import { ScriptCard } from '@/components/ScriptCard';
 import { ScriptEditor } from '@/components/ScriptEditor';
 import { CreateScriptDialog } from '@/components/CreateScriptDialog';
-import { Search, FileText } from 'lucide-react';
+import { MoodboardPanel } from '@/components/MoodboardPanel';
+import { SplitScriptView } from '@/components/SplitScriptView';
+import { Search, FileText, LayoutGrid, Columns } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
 const Index = () => {
   const {
@@ -23,6 +27,7 @@ const Index = () => {
 
   const [editingScriptId, setEditingScriptId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSplitView, setIsSplitView] = useState(false);
 
   const editingScript = editingScriptId ? getScript(editingScriptId) : null;
 
@@ -62,7 +67,7 @@ const Index = () => {
     <div className="min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-10 glass border-b border-border/50">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+        <div className="max-w-[1600px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
@@ -75,55 +80,103 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <CreateScriptDialog onCreate={handleCreate} />
+            <div className="flex items-center gap-2">
+              <Button
+                variant={isSplitView ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setIsSplitView(!isSplitView)}
+                className="gap-2"
+              >
+                {isSplitView ? (
+                  <>
+                    <LayoutGrid className="w-4 h-4" />
+                    Grid View
+                  </>
+                ) : (
+                  <>
+                    <Columns className="w-4 h-4" />
+                    Split View
+                  </>
+                )}
+              </Button>
+              <CreateScriptDialog onCreate={handleCreate} />
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      {/* Main Content with Moodboard */}
+      <main className="max-w-[1600px] mx-auto px-6 py-8">
         {scripts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
-            <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mb-6">
-              <FileText className="w-10 h-10 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-medium mb-2">No scripts yet</h2>
-            <p className="text-muted-foreground mb-6 max-w-sm">
-              Create your first script to start organizing your content ideas with inspiration.
-            </p>
-            <CreateScriptDialog onCreate={handleCreate} />
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Search */}
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search scripts..."
-                className="pl-10 bg-secondary/30 border-border/50"
-              />
-            </div>
-
-            {/* Scripts Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredScripts.map((script) => (
-                <ScriptCard
-                  key={script.id}
-                  script={script}
-                  onClick={() => setEditingScriptId(script.id)}
-                  onDelete={() => deleteScript(script.id)}
-                />
-              ))}
-            </div>
-
-            {filteredScripts.length === 0 && searchQuery && (
-              <div className="text-center py-12 text-muted-foreground">
-                No scripts found matching "{searchQuery}"
+          <ResizablePanelGroup direction="horizontal" className="min-h-[calc(100vh-160px)]">
+            <ResizablePanel defaultSize={70} minSize={50}>
+              <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in pr-6">
+                <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mb-6">
+                  <FileText className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <h2 className="text-xl font-medium mb-2">No scripts yet</h2>
+                <p className="text-muted-foreground mb-6 max-w-sm">
+                  Create your first script to start organizing your content ideas with inspiration.
+                </p>
+                <CreateScriptDialog onCreate={handleCreate} />
               </div>
-            )}
-          </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={30} minSize={20}>
+              <div className="h-full pl-4">
+                <MoodboardPanel />
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <ResizablePanelGroup direction="horizontal" className="min-h-[calc(100vh-160px)]">
+            <ResizablePanel defaultSize={70} minSize={50}>
+              <div className="space-y-6 pr-6">
+                {/* Search */}
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search scripts..."
+                    className="pl-10 bg-secondary/30 border-border/50"
+                  />
+                </div>
+
+                {/* Scripts Grid or Split View */}
+                {isSplitView ? (
+                  <SplitScriptView
+                    scripts={filteredScripts}
+                    onScriptClick={setEditingScriptId}
+                    onScriptDelete={deleteScript}
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredScripts.map((script) => (
+                      <ScriptCard
+                        key={script.id}
+                        script={script}
+                        onClick={() => setEditingScriptId(script.id)}
+                        onDelete={() => deleteScript(script.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {filteredScripts.length === 0 && searchQuery && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    No scripts found matching "{searchQuery}"
+                  </div>
+                )}
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={30} minSize={20}>
+              <div className="h-full pl-4">
+                <MoodboardPanel />
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         )}
       </main>
     </div>
