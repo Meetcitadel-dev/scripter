@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, X, Loader2, ImagePlus, Plus } from 'lucide-react';
+import { Image, Upload, X, Loader2, Grid3X3, ImagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,7 +11,6 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { MoodboardPanel } from './MoodboardPanel';
-import { ImageOverlay } from './ImageOverlay';
 
 interface ProjectMoodboardProps {
   scriptId: string;
@@ -19,9 +18,6 @@ interface ProjectMoodboardProps {
   onAddImage: (url: string) => void;
   onRemoveImage: (url: string) => void;
 }
-
-// Fixed dimensions for project moodboard
-const MOODBOARD_HEIGHT = 200;
 
 export const ProjectMoodboard = ({
   scriptId,
@@ -31,7 +27,6 @@ export const ProjectMoodboard = ({
 }: ProjectMoodboardProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [overlayImage, setOverlayImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,27 +75,21 @@ export const ProjectMoodboard = ({
     toast.success('Image added from moodboard');
   };
 
-  const handleImageClick = (url: string) => {
-    setOverlayImage(url);
-  };
-
-  // Calculate grid columns based on image count to fit in fixed height
-  const getGridColumns = () => {
+  const getGridClass = () => {
     const count = images.length;
-    if (count <= 3) return 3;
-    if (count <= 6) return 4;
-    if (count <= 10) return 5;
-    if (count <= 15) return 6;
-    if (count <= 21) return 7;
-    return 8;
+    if (count <= 12) return 'grid-cols-3';
+    if (count <= 20) return 'grid-cols-4';
+    if (count <= 30) return 'grid-cols-5';
+    return 'grid-cols-6';
   };
-
-  const gridCols = getGridColumns();
 
   return (
-    <div className="glass-card overflow-hidden">
-      <div className="flex items-center justify-between p-3 border-b border-border/50">
-        <h4 className="text-sm font-medium">Project Moodboard</h4>
+    <div className="glass-card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Grid3X3 className="w-4 h-4 text-primary" />
+          <h4 className="text-sm font-medium">Project Moodboard</h4>
+        </div>
         <div className="flex items-center gap-2">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -148,57 +137,38 @@ export const ProjectMoodboard = ({
         </div>
       </div>
 
-      <div style={{ height: MOODBOARD_HEIGHT }} className="overflow-hidden">
-        {images.length === 0 ? (
-          <div 
-            className="h-full flex items-center justify-center cursor-pointer hover:bg-secondary/20 transition-colors"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="text-center">
-              <Plus className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-xs text-muted-foreground">
-                Add images to this project
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div 
-            className="moodboard-grid h-full"
-            style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}
-          >
-            {images.map((url, index) => (
-              <div
-                key={index}
-                className="group relative bg-secondary cursor-pointer"
-                onClick={() => handleImageClick(url)}
+      {images.length === 0 ? (
+        <div className="border border-dashed border-border rounded-lg p-4 text-center">
+          <Image className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-xs text-muted-foreground">
+            Add images specific to this project
+          </p>
+        </div>
+      ) : (
+        <div className={`grid ${getGridClass()} gap-2`}>
+          {images.map((url, index) => (
+            <div
+              key={index}
+              className="group relative aspect-square bg-secondary/50 rounded-lg overflow-hidden"
+            >
+              <img
+                src={url}
+                alt="Project moodboard"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/placeholder.svg';
+                }}
+              />
+              <button
+                onClick={() => onRemoveImage(url)}
+                className="absolute top-1 right-1 p-1 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
               >
-                <img
-                  src={url}
-                  alt="Project moodboard"
-                  className="moodboard-image"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.svg';
-                  }}
-                />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemoveImage(url);
-                  }}
-                  className="absolute top-1 right-1 p-1 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <ImageOverlay 
-        imageUrl={overlayImage} 
-        onClose={() => setOverlayImage(null)} 
-      />
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

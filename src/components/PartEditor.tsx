@@ -9,53 +9,30 @@ interface PartEditorProps {
   part: ScriptPart;
   partNumber: number;
   canDelete: boolean;
-  isAdvancedMode?: boolean;
   onUpdate: (updates: Partial<ScriptPart>) => void;
   onDelete: () => void;
   onAddInspiration: (inspiration: { type: 'link' | 'image'; url: string; title?: string }) => void;
   onRemoveInspiration: (inspirationId: string) => void;
   scriptId?: string;
-  onDragStart?: () => void;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDragEnd?: () => void;
-  onDrop?: () => void;
-  isDragging?: boolean;
-  isDragOver?: boolean;
 }
 
 export const PartEditor = ({
   part,
   partNumber,
   canDelete,
-  isAdvancedMode = false,
   onUpdate,
   onDelete,
   onAddInspiration,
   onRemoveInspiration,
   scriptId,
-  onDragStart,
-  onDragOver,
-  onDragEnd,
-  onDrop,
-  isDragging,
-  isDragOver,
 }: PartEditorProps) => {
   return (
-    <div 
-      className={`glass-card p-5 space-y-4 animate-slide-up transition-all ${
-        isDragging ? 'opacity-50 scale-95' : ''
-      } ${isDragOver ? 'ring-2 ring-primary' : ''}`}
-      draggable
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDragEnd={onDragEnd}
-      onDrop={onDrop}
-    >
+    <div className="glass-card p-5 space-y-4 animate-slide-up">
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 text-muted-foreground cursor-grab active:cursor-grabbing">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <GripVertical className="w-4 h-4" />
-          <span className="text-sm font-medium w-6">
-            {partNumber}
+          <span className="text-xs font-medium uppercase tracking-wider">
+            Part {partNumber}
           </span>
         </div>
         <div className="flex-1">
@@ -79,29 +56,13 @@ export const PartEditor = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-3">
-          {isAdvancedMode && (
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Scene Depiction</label>
-              <Textarea
-                value={part.sceneDepiction || ''}
-                onChange={(e) => onUpdate({ sceneDepiction: e.target.value })}
-                placeholder="Describe the scene, visuals, settings..."
-                className="min-h-[100px] bg-secondary/30 border-border/50 resize-none focus-visible:ring-primary/50"
-              />
-            </div>
-          )}
-          <div>
-            {isAdvancedMode && (
-              <label className="text-xs text-muted-foreground mb-1 block">Dialogue / Script</label>
-            )}
-            <Textarea
-              value={part.content}
-              onChange={(e) => onUpdate({ content: e.target.value })}
-              placeholder={isAdvancedMode ? "Write the dialogue for this part..." : "Write your script for this part..."}
-              className="min-h-[200px] bg-secondary/30 border-border/50 resize-none focus-visible:ring-primary/50"
-            />
-          </div>
+        <div className="lg:col-span-2">
+          <Textarea
+            value={part.content}
+            onChange={(e) => onUpdate({ content: e.target.value })}
+            placeholder="Write your script for this part..."
+            className="min-h-[200px] bg-secondary/30 border-border/50 resize-none focus-visible:ring-primary/50"
+          />
         </div>
         <div>
           <InspirationPanel

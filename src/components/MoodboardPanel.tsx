@@ -1,10 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, X, Loader2, Plus, ImagePlus } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Image, Upload, X, Loader2, Grid3X3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { MoodboardImage } from '@/types/script';
-import { ImageOverlay } from './ImageOverlay';
 
 const MOODBOARD_STORAGE_KEY = 'general-moodboard';
 
@@ -16,9 +15,7 @@ interface MoodboardPanelProps {
 export const MoodboardPanel = ({ onSelectImage, selectionMode = false }: MoodboardPanelProps) => {
   const [images, setImages] = useState<MoodboardImage[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [overlayImage, setOverlayImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(MOODBOARD_STORAGE_KEY);
@@ -31,64 +28,41 @@ export const MoodboardPanel = ({ onSelectImage, selectionMode = false }: Moodboa
     localStorage.setItem(MOODBOARD_STORAGE_KEY, JSON.stringify(images));
   }, [images]);
 
-  const uploadImage = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      toast.error(`${file.name} is not an image`);
-      return null;
-    }
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `general/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('moodboard')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('moodboard')
-      .getPublicUrl(filePath);
-
-    // Get image dimensions
-    return new Promise<MoodboardImage>((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        resolve({
-          id: Math.random().toString(36).substring(2, 15),
-          url: publicUrl,
-          originalWidth: img.naturalWidth,
-          originalHeight: img.naturalHeight,
-          createdAt: new Date(),
-        });
-      };
-      img.onerror = () => {
-        resolve({
-          id: Math.random().toString(36).substring(2, 15),
-          url: publicUrl,
-          createdAt: new Date(),
-        });
-      };
-      img.src = publicUrl;
-    });
-  };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
     try {
-      const newImages: MoodboardImage[] = [];
       for (const file of Array.from(files)) {
-        const result = await uploadImage(file);
-        if (result) newImages.push(result);
+        if (!file.type.startsWith('image/')) {
+          toast.error(`${file.name} is not an image`);
+          continue;
+        }
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `general/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('moodboard')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('moodboard')
+          .getPublicUrl(filePath);
+
+        const newImage: MoodboardImage = {
+          id: Math.random().toString(36).substring(2, 15),
+          url: publicUrl,
+          createdAt: new Date(),
+        };
+
+        setImages(prev => [...prev, newImage]);
       }
-      setImages(prev => [...prev, ...newImages]);
-      if (newImages.length > 0) {
-        toast.success('Images uploaded successfully');
-      }
+      toast.success('Images uploaded successfully');
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload images');
@@ -100,70 +74,32 @@ export const MoodboardPanel = ({ onSelectImage, selectionMode = false }: Moodboa
     }
   };
 
-  const handlePaste = useCallback(async (e: ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        const blob = items[i].getAsFile();
-        if (blob) {
-          setIsUploading(true);
-          try {
-            const result = await uploadImage(blob);
-            if (result) {
-              setImages(prev => [...prev, result]);
-              toast.success('Image pasted and uploaded');
-            }
-          } catch (error) {
-            console.error('Paste error:', error);
-            toast.error('Failed to upload pasted image');
-          } finally {
-            setIsUploading(false);
-          }
-        }
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener('paste', handlePaste);
-    return () => document.removeEventListener('paste', handlePaste);
-  }, [handlePaste]);
-
-  const handleRemove = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
+  const handleRemove = (id: string) => {
     setImages(prev => prev.filter(img => img.id !== id));
   };
 
-  const handleImageClick = (img: MoodboardImage) => {
+  const handleImageClick = (url: string) => {
     if (selectionMode && onSelectImage) {
-      onSelectImage(img.url);
-    } else {
-      setOverlayImage(img.url);
+      onSelectImage(url);
     }
   };
 
-  // Calculate grid columns based on image count
-  const getGridColumns = () => {
+  // Calculate grid columns based on image count for 3x4 base grid
+  const getGridClass = () => {
     const count = images.length;
-    if (count <= 12) return 3;
-    if (count <= 20) return 4;
-    if (count <= 30) return 5;
-    if (count <= 42) return 6;
-    if (count <= 56) return 7;
-    return 8;
+    if (count <= 12) return 'grid-cols-3'; // 3 columns for up to 12 images
+    if (count <= 20) return 'grid-cols-4'; // 4 columns for up to 20 images
+    if (count <= 30) return 'grid-cols-5'; // 5 columns for up to 30 images
+    return 'grid-cols-6'; // 6 columns for more
   };
 
-  const gridCols = getGridColumns();
-
   return (
-    <div 
-      ref={containerRef}
-      className="h-full flex flex-col bg-background"
-    >
-      {/* Action buttons at top */}
-      <div className="flex items-center gap-2 p-3 border-b border-border">
+    <div className="h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Grid3X3 className="w-5 h-5 text-primary" />
+          <h3 className="font-medium">General Moodboard</h3>
+        </div>
         <input
           ref={fileInputRef}
           type="file"
@@ -177,63 +113,55 @@ export const MoodboardPanel = ({ onSelectImage, selectionMode = false }: Moodboa
           size="sm"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="gap-2"
         >
           {isUploading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Uploading...
             </>
           ) : (
             <>
-              <ImagePlus className="w-4 h-4" />
+              <Upload className="w-4 h-4 mr-2" />
               Add Images
             </>
           )}
         </Button>
-        <span className="text-xs text-muted-foreground">
-          or paste directly
-        </span>
       </div>
 
-      {/* Moodboard grid */}
-      <div className="flex-1 overflow-hidden">
-        {images.length === 0 ? (
-          <div 
-            className="h-full flex items-center justify-center cursor-pointer hover:bg-secondary/20 transition-colors"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="text-center p-6">
-              <Plus className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
-                Click to add or paste images
-              </p>
-            </div>
+      {images.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center border border-dashed border-border rounded-lg">
+          <div className="text-center p-6">
+            <Image className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">
+              Upload images to your moodboard
+            </p>
           </div>
-        ) : (
-          <div 
-            className="moodboard-grid h-full"
-            style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}
-          >
+        </div>
+      ) : (
+        <div className="flex-1 overflow-auto">
+          <div className={`grid ${getGridClass()} gap-2`}>
             {images.map((img) => (
               <div
                 key={img.id}
-                className={`group relative bg-secondary cursor-pointer ${
-                  selectionMode ? 'hover:ring-2 hover:ring-primary hover:ring-inset' : ''
+                className={`group relative aspect-square bg-secondary/50 rounded-lg overflow-hidden ${
+                  selectionMode ? 'cursor-pointer hover:ring-2 hover:ring-primary' : ''
                 }`}
-                onClick={() => handleImageClick(img)}
+                onClick={() => handleImageClick(img.url)}
               >
                 <img
                   src={img.url}
                   alt="Moodboard"
-                  className="moodboard-image"
+                  className="w-full h-full object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/placeholder.svg';
                   }}
                 />
                 {!selectionMode && (
                   <button
-                    onClick={(e) => handleRemove(e, img.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemove(img.id);
+                    }}
                     className="absolute top-1 right-1 p-1 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
                   >
                     <X className="w-3 h-3" />
@@ -242,13 +170,8 @@ export const MoodboardPanel = ({ onSelectImage, selectionMode = false }: Moodboa
               </div>
             ))}
           </div>
-        )}
-      </div>
-
-      <ImageOverlay 
-        imageUrl={overlayImage} 
-        onClose={() => setOverlayImage(null)} 
-      />
+        </div>
+      )}
     </div>
   );
 };

@@ -69,32 +69,6 @@
     @apply bg-background text-foreground;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
   }
-
-  /* Custom themed scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: hsl(var(--secondary));
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
-  }
-
-  /* Firefox scrollbar */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.3) hsl(var(--secondary));
-  }
 }
 
 @layer utilities {
@@ -129,20 +103,6 @@
   .hover-lift:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
-  }
-
-  /* Moodboard grid styling */
-  .moodboard-grid {
-    display: grid;
-    gap: 1px;
-    background: hsl(0 0% 0%);
-  }
-
-  .moodboard-image {
-    aspect-ratio: 1;
-    object-fit: cover;
-    width: 100%;
-    height: 100%;
   }
 }
 
