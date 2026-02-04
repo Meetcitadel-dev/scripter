@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { MoodboardPanel } from './MoodboardPanel';
+import { ImageOverlay } from './ImageOverlay';
 
 interface InspirationPanelProps {
   inspirations: Inspiration[];
@@ -29,6 +30,7 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove, scriptId }: In
   const [imageUrl, setImageUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [showMoodboard, setShowMoodboard] = useState(false);
+  const [overlayImage, setOverlayImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddLink = () => {
@@ -110,6 +112,10 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove, scriptId }: In
     setShowMoodboard(false);
     setIsOpen(false);
     toast.success('Image added from moodboard');
+  };
+
+  const handleImageClick = (url: string) => {
+    setOverlayImage(url);
   };
 
   return (
@@ -253,10 +259,13 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove, scriptId }: In
           {inspirations.map((item) => (
             <div
               key={item.id}
-              className="group relative bg-secondary/50 rounded-lg overflow-hidden animate-scale-in"
+              className="group relative bg-secondary/50 overflow-hidden animate-scale-in"
             >
               {item.type === 'image' ? (
-                <div className="aspect-video">
+                <div 
+                  className="aspect-video cursor-pointer"
+                  onClick={() => handleImageClick(item.url)}
+                >
                   <img
                     src={item.url}
                     alt="Inspiration"
@@ -291,6 +300,11 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove, scriptId }: In
           ))}
         </div>
       )}
+
+      <ImageOverlay 
+        imageUrl={overlayImage} 
+        onClose={() => setOverlayImage(null)} 
+      />
     </div>
   );
 };
