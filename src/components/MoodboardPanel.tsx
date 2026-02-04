@@ -40,12 +40,20 @@ export const MoodboardPanel = ({
   }, [images]);
 
   // External trigger from parent (homepage Add Images button)
-  // Only react when the key actually changes, so we don't auto-open
-  // the file picker when navigating back to the homepage.
+  // Only react after initial mount, and only when the key actually changes,
+  // so we don't auto-open the file picker when navigating back to the homepage.
   const lastUploadKeyRef = useRef<number | null>(null);
+  const hasInitializedUploadKey = useRef(false);
   useEffect(() => {
     if (selectionMode) return;
     if (uploadRequestKey == null) return;
+
+    // Skip the very first render so going back to the homepage never auto-opens.
+    if (!hasInitializedUploadKey.current) {
+      hasInitializedUploadKey.current = true;
+      lastUploadKeyRef.current = uploadRequestKey;
+      return;
+    }
 
     if (lastUploadKeyRef.current === uploadRequestKey) {
       return;
@@ -220,39 +228,91 @@ export const MoodboardPanel = ({
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-auto scrollbar-theme">
-          <div className={`grid ${gridColsClass} gap-0`}>
-            {images.map((img) => (
-              <div
-                key={img.id}
-                className={`group relative aspect-square bg-secondary/50 overflow-hidden border border-black ${
-                  selectionMode ? 'cursor-pointer hover:ring-2 hover:ring-primary' : ''
-                }`}
-                onClick={() => handleImageClick(img.url)}
-              >
-                <img
-                  src={img.url}
-                  alt="Moodboard"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.svg';
-                  }}
-                />
-                {!selectionMode && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemove(img.id);
-                    }}
-                    className="absolute top-1 right-1 p-1 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
+        <>
+          {/* Homepage general moodboard: fixed canvas, no scrollbar, tiles shrink to fit */}
+          {chrome === 'none' && !selectionMode ? (
+            <div className="flex-1 border border-border relative">
+              <div className="absolute inset-0">
+                {images.map((img, index) => {
+                  const count = images.length;
+                  const gridSide = Math.max(1, Math.ceil(Math.sqrt(count)));
+                  const sizePct = 100 / gridSide;
+                  const row = Math.floor(index / gridSide);
+                  const col = index % gridSide;
+
+                  return (
+                    <div
+                      key={img.id}
+                      className="group absolute bg-secondary/50 overflow-hidden cursor-pointer border border-black"
+                      style={{
+                        top: `${row * sizePct}%`,
+                        left: `${col * sizePct}%`,
+                        width: `${sizePct}%`,
+                        height: `${sizePct}%`,
+                      }}
+                      onClick={() => handleImageClick(img.url)}
+                    >
+                      <img
+                        src={img.url}
+                        alt="Moodboard"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.svg';
+                        }}
+                      />
+                      {!selectionMode && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemove(img.id);
+                          }}
+                          className="absolute top-1 right-1 p-1 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          ) : (
+            // Default / selection mode: scrollable grid
+            <div className="flex-1 overflow-auto scrollbar-theme">
+              <div className={`grid ${gridColsClass} gap-0`}>
+                {images.map((img) => (
+                  <div
+                    key={img.id}
+                    className={`group relative aspect-square bg-secondary/50 overflow-hidden border border-black ${
+                      selectionMode ? 'cursor-pointer hover:ring-2 hover:ring-primary' : ''
+                    }`}
+                    onClick={() => handleImageClick(img.url)}
+                  >
+                    <img
+                      src={img.url}
+                      alt="Moodboard"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/placeholder.svg';
+                      }}
+                    />
+                    {!selectionMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemove(img.id);
+                        }}
+                        className="absolute top-1 right-1 p-1 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Overlay preview */}
