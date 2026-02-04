@@ -125,3 +125,29 @@
     transform: translateY(0);
   }
 }
+
+/* Themed scrollbars (VSCode-style) */
+.scrollbar-theme {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted)) transparent;
+}
+.scrollbar-theme::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scrollbar-theme::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-theme::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.scrollbar-theme::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+  background-clip: padding-box;
+}
+.scrollbar-theme::-webkit-scrollbar-corner {
+  background: transparent;
+}

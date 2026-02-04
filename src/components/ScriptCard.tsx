@@ -12,9 +12,11 @@ interface ScriptCardProps {
   script: Script;
   onClick: () => void;
   onDelete: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
-export const ScriptCard = ({ script, onClick, onDelete }: ScriptCardProps) => {
+export const ScriptCard = ({ script, onClick, onDelete, onMoveUp, onMoveDown }: ScriptCardProps) => {
   const partsCount = script.parts?.length || 0;
   const inspirationsCount = script.isMultiPart 
     ? script.parts?.reduce((acc, part) => acc + part.inspirations.length, 0) || 0
@@ -51,6 +53,26 @@ export const ScriptCard = ({ script, onClick, onDelete }: ScriptCardProps) => {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40">
+            {onMoveUp && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveUp();
+                }}
+              >
+                Move up
+              </DropdownMenuItem>
+            )}
+            {onMoveDown && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveDown();
+                }}
+              >
+                Move down
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem 
               onClick={(e) => {
                 e.stopPropagation();

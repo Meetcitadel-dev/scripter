@@ -1,6 +1,9 @@
 import { Script } from '@/types/script';
 import { ScriptCard } from './ScriptCard';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+const SPLIT_VIEW_HEIGHT = 480;
 
 interface SplitScriptViewProps {
   scripts: Script[];
@@ -9,20 +12,16 @@ interface SplitScriptViewProps {
 }
 
 export const SplitScriptView = ({ scripts, onScriptClick, onScriptDelete }: SplitScriptViewProps) => {
-  // Split scripts into two halves
-  const midpoint = Math.ceil(scripts.length / 2);
-  const leftScripts = scripts.slice(0, midpoint);
-  const rightScripts = scripts.slice(midpoint);
-
-  const renderScriptList = (scriptList: Script[]) => (
-    <div className="h-full overflow-y-auto p-4 space-y-4">
-      {scriptList.length === 0 ? (
+  // Same full list in both panels (VSCode-style); each panel has its own scroll
+  const renderScriptList = () => (
+    <div className="p-4 space-y-4">
+      {scripts.length === 0 ? (
         <div className="text-center text-muted-foreground py-8">
-          No scripts in this panel
+          No scripts yet
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {scriptList.slice(0, 3).map((script) => (
+          {scripts.map((script) => (
             <ScriptCard
               key={script.id}
               script={script}
@@ -32,25 +31,24 @@ export const SplitScriptView = ({ scripts, onScriptClick, onScriptDelete }: Spli
           ))}
         </div>
       )}
-      {scriptList.length > 3 && (
-        <div className="text-center text-xs text-muted-foreground">
-          +{scriptList.length - 3} more scripts
-        </div>
-      )}
     </div>
   );
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="min-h-[400px] rounded-lg border border-border">
-      <ResizablePanel defaultSize={50} minSize={30}>
+    <ResizablePanelGroup direction="horizontal" className="rounded-lg border border-border" style={{ height: SPLIT_VIEW_HEIGHT }}>
+      <ResizablePanel defaultSize={50} minSize={30} className="min-h-0">
         <div className="h-full bg-secondary/20">
-          {renderScriptList(leftScripts)}
+          <ScrollArea className="h-full scrollbar-theme">
+            {renderScriptList()}
+          </ScrollArea>
         </div>
       </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={50} minSize={30}>
+      <ResizablePanel defaultSize={50} minSize={30} className="min-h-0">
         <div className="h-full bg-secondary/20">
-          {renderScriptList(rightScripts)}
+          <ScrollArea className="h-full scrollbar-theme">
+            {renderScriptList()}
+          </ScrollArea>
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

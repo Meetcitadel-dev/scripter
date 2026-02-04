@@ -27,6 +27,7 @@ export const ProjectMoodboard = ({
 }: ProjectMoodboardProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,13 +76,9 @@ export const ProjectMoodboard = ({
     toast.success('Image added from moodboard');
   };
 
-  const getGridClass = () => {
-    const count = images.length;
-    if (count <= 12) return 'grid-cols-3';
-    if (count <= 20) return 'grid-cols-4';
-    if (count <= 30) return 'grid-cols-5';
-    return 'grid-cols-6';
-  };
+  // Grid settings: 5 square tiles per row in a scrollable, fixed-height viewport.
+  const MOODBOARD_COLS = 5;
+  const MOODBOARD_FIXED_HEIGHT = 220;
 
   return (
     <div className="glass-card p-4">
@@ -137,38 +134,66 @@ export const ProjectMoodboard = ({
         </div>
       </div>
 
-      {images.length === 0 ? (
-        <div className="border border-dashed border-border rounded-lg p-4 text-center">
-          <Image className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-xs text-muted-foreground">
-            Add images specific to this project
-          </p>
-        </div>
-      ) : (
-        <div className={`grid ${getGridClass()} gap-2`}>
-          {images.map((url, index) => (
-            <div
-              key={index}
-              className="group relative aspect-square bg-secondary/50 rounded-lg overflow-hidden"
-            >
-              <img
-                src={url}
-                alt="Project moodboard"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/placeholder.svg';
-                }}
-              />
-              <button
-                onClick={() => onRemoveImage(url)}
-                className="absolute top-1 right-1 p-1 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-              >
-                <X className="w-3 h-3" />
-              </button>
+      <div
+        className="w-full overflow-auto scrollbar-theme"
+        style={{ height: MOODBOARD_FIXED_HEIGHT }}
+      >
+        {images.length === 0 ? (
+          <div className="border border-dashed border-border flex items-center justify-center text-center h-full">
+            <div>
+              <Image className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">
+                Add images specific to this project
+              </p>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ) : (
+          <div
+            className="grid gap-0 w-full"
+            style={{ gridTemplateColumns: `repeat(${MOODBOARD_COLS}, 1fr)` }}
+          >
+            {images.map((url, index) => (
+              <div
+                key={index}
+                className="group relative bg-secondary/50 overflow-hidden cursor-pointer border border-black aspect-square"
+                onClick={() => setPreviewUrl(url)}
+              >
+                <img
+                  src={url}
+                  alt="Project moodboard"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/placeholder.svg';
+                  }}
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveImage(url);
+                  }}
+                  className="absolute top-1 right-1 p-1 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Preview at original resolution */}
+      <Dialog open={!!previewUrl} onOpenChange={(open) => !open && setPreviewUrl(null)}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-2 flex items-center justify-center bg-background/95">
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className="max-w-full max-h-[85vh] w-auto h-auto object-contain"
+              style={{ imageRendering: 'auto' }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

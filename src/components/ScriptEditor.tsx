@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Script, ScriptPart } from '@/types/script';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,15 +7,18 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { InspirationPanel } from './InspirationPanel';
 import { PartEditor } from './PartEditor';
-import { AIBrainstormPanel } from './AIBrainstormPanel';
 import { SoundtrackPlayer } from './SoundtrackPlayer';
 import { ProjectMoodboard } from './ProjectMoodboard';
-import { ArrowLeft, Plus, Layers, FileText, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, Layers, FileText, SlidersHorizontal, Columns } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
 interface ScriptEditorProps {
   script: Script;
   onBack: () => void;
   onUpdate: (updates: Partial<Script>) => void;
+  onAddMoodboardImage: (url: string) => void;
+  onRemoveMoodboardImage: (url: string) => void;
   onAddPart: () => void;
   onUpdatePart: (partId: string, updates: Partial<ScriptPart>) => void;
   onDeletePart: (partId: string) => void;
@@ -27,6 +30,8 @@ export const ScriptEditor = ({
   script,
   onBack,
   onUpdate,
+  onAddMoodboardImage,
+  onRemoveMoodboardImage,
   onAddPart,
   onUpdatePart,
   onDeletePart,
@@ -34,15 +39,18 @@ export const ScriptEditor = ({
   onRemoveInspiration,
 }: ScriptEditorProps) => {
   const [title, setTitle] = useState(script.title);
-  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
+  const [isPartsSplitView, setIsPartsSplitView] = useState(false);
 
-  // Get current script content for AI context
-  const getCurrentContent = () => {
-    if (script.isMultiPart) {
-      return script.parts?.map(p => `## ${p.title}\n${p.content}`).join('\n\n') || '';
-    }
-    return script.content || '';
-  };
+  // Back-compat: migrate single soundtrack fields to list once
+  useEffect(() => {
+    if (!script.soundtrackUrl) return;
+    if (script.soundtracks && script.soundtracks.length > 0) return;
+    onUpdate({
+      soundtracks: [{ url: script.soundtrackUrl, name: script.soundtrackName }],
+      soundtrackUrl: undefined,
+      soundtrackName: undefined,
+    });
+  }, [onUpdate, script.soundtrackName, script.soundtrackUrl, script.soundtracks, script.id]);
 
   useEffect(() => {
     setTitle(script.title);
@@ -93,17 +101,68 @@ export const ScriptEditor = ({
     }
   };
 
-  const handleSoundtrackUpdate = (url: string | undefined, name: string | undefined) => {
-    onUpdate({ soundtrackUrl: url, soundtrackName: name });
+  const tracks = script.soundtracks || [];
+  const updateTrackAt = (index: number, url: string | undefined, name: string | undefined) => {
+    const next = [...tracks];
+    if (!url) {
+      // remove track
+      next.splice(index, 1);
+    } else {
+      next[index] = { url, name };
+    }
+    onUpdate({ soundtracks: next });
   };
 
-  const handleMoodboardAdd = (url: string) => {
-    onUpdate({ moodboard: [...(script.moodboard || []), url] });
+  const addEmptyTrack = () => {
+    onUpdate({ soundtracks: [...tracks, { url: '', name: '' }] });
+  };
+  const tracksToRender = useMemo(() => {
+    // Always keep at least one empty slot so user can upload quickly
+    if (tracks.length === 0) return [{ url: '', name: '' }];
+    return tracks;
+  }, [tracks]);
+
+  const reorderParts = (fromId: string, toId: string) => {
+    const parts = script.parts || [];
+    const fromIndex = parts.findIndex(p => p.id === fromId);
+    const toIndex = parts.findIndex(p => p.id === toId);
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+    const next = [...parts];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    onUpdate({ parts: next });
   };
 
-  const handleMoodboardRemove = (url: string) => {
-    onUpdate({ moodboard: (script.moodboard || []).filter(u => u !== url) });
-  };
+  const renderPartsList = () => (
+    <div className="space-y-6">
+      {script.parts?.map((part, index) => (
+        <div key={part.id}>
+          <PartEditor
+            part={part}
+            partNumber={index + 1}
+            canDelete={script.parts!.length > 1}
+            advancedMode={!!script.advancedMode}
+            onUpdate={(updates) => onUpdatePart(part.id, updates)}
+            onDelete={() => onDeletePart(part.id)}
+            onAddInspiration={(insp) => onAddInspiration(insp, part.id)}
+            onRemoveInspiration={(id) => onRemoveInspiration(id, part.id)}
+            scriptId={script.id}
+            projectImages={script.moodboard || []}
+            onMoveUp={index > 0 ? () => reorderParts(part.id, script.parts![index - 1].id) : undefined}
+            onMoveDown={index < (script.parts!.length - 1) ? () => reorderParts(part.id, script.parts![index + 1].id) : undefined}
+          />
+        </div>
+      ))}
+      <Button
+        variant="outline"
+        onClick={onAddPart}
+        className="w-full border-dashed border-border/50 hover:border-primary/50 hover:bg-primary/5"
+      >
+        <Plus className="w-4 h-4 mr-2" />
+        Add Part
+      </Button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen">
@@ -143,25 +202,54 @@ export const ScriptEditor = ({
               </Label>
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsAIPanelOpen(true)}
-              className="gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              AI Brainstorm
-            </Button>
+            {script.isMultiPart && (
+              <div className="flex items-center gap-3 bg-secondary/50 rounded-lg px-3 py-2">
+                <SlidersHorizontal className={`w-4 h-4 ${script.advancedMode ? 'text-primary' : 'text-muted-foreground'}`} />
+                <Switch
+                  checked={!!script.advancedMode}
+                  onCheckedChange={(checked) => onUpdate({ advancedMode: checked })}
+                  id="advanced-mode"
+                />
+                <Label htmlFor="advanced-mode" className="text-xs text-muted-foreground cursor-pointer">
+                  Advanced
+                </Label>
+              </div>
+            )}
+
+            {script.isMultiPart && (
+              <Button
+                variant={isPartsSplitView ? 'secondary' : 'outline'}
+                size="sm"
+                onClick={() => setIsPartsSplitView(v => !v)}
+                className="gap-2"
+              >
+                <Columns className="w-4 h-4" />
+                Split view
+              </Button>
+            )}
           </div>
 
           {/* Soundtrack Player */}
           <div className="mt-3">
-            <SoundtrackPlayer
-              scriptId={script.id}
-              soundtrackUrl={script.soundtrackUrl}
-              soundtrackName={script.soundtrackName}
-              onUpdate={handleSoundtrackUpdate}
-            />
+            <div className="space-y-2">
+              {tracksToRender.map((t, idx) => (
+                <SoundtrackPlayer
+                  key={`${t.url}-${idx}`}
+                  scriptId={script.id}
+                  soundtrackUrl={t.url}
+                  soundtrackName={t.name}
+                  onUpdate={(url, name) => updateTrackAt(idx, url, name)}
+                />
+              ))}
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={addEmptyTrack}>
+                  + Add track
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Multiple soundtracks can play at the same time.
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -173,36 +261,33 @@ export const ScriptEditor = ({
           <ProjectMoodboard
             scriptId={script.id}
             images={script.moodboard || []}
-            onAddImage={handleMoodboardAdd}
-            onRemoveImage={handleMoodboardRemove}
+            onAddImage={onAddMoodboardImage}
+            onRemoveImage={onRemoveMoodboardImage}
           />
         </div>
 
         {script.isMultiPart ? (
-          <div className="space-y-6">
-            {script.parts?.map((part, index) => (
-              <PartEditor
-                key={part.id}
-                part={part}
-                partNumber={index + 1}
-                canDelete={script.parts!.length > 1}
-                onUpdate={(updates) => onUpdatePart(part.id, updates)}
-                onDelete={() => onDeletePart(part.id)}
-                onAddInspiration={(insp) => onAddInspiration(insp, part.id)}
-                onRemoveInspiration={(id) => onRemoveInspiration(id, part.id)}
-                scriptId={script.id}
-              />
-            ))}
-            
-            <Button
-              variant="outline"
-              onClick={onAddPart}
-              className="w-full border-dashed border-border/50 hover:border-primary/50 hover:bg-primary/5"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Part
-            </Button>
-          </div>
+          isPartsSplitView ? (
+            <ResizablePanelGroup direction="horizontal" className="rounded-lg border border-border min-h-[70vh]">
+              <ResizablePanel defaultSize={50} minSize={30} className="min-h-0">
+                <ScrollArea className="h-[calc(100vh-280px)] scrollbar-theme">
+                  <div className="p-2">
+                    {renderPartsList()}
+                  </div>
+                </ScrollArea>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={50} minSize={30} className="min-h-0">
+                <ScrollArea className="h-[calc(100vh-280px)] scrollbar-theme">
+                  <div className="p-2">
+                    {renderPartsList()}
+                  </div>
+                </ScrollArea>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          ) : (
+            renderPartsList()
+          )
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
@@ -222,19 +307,13 @@ export const ScriptEditor = ({
                   onAdd={(insp) => onAddInspiration(insp)}
                   onRemove={(id) => onRemoveInspiration(id)}
                   scriptId={script.id}
+                  projectImages={script.moodboard || []}
                 />
               </div>
             </div>
           </div>
         )}
       </main>
-
-      {/* AI Brainstorm Panel */}
-      <AIBrainstormPanel
-        isOpen={isAIPanelOpen}
-        onClose={() => setIsAIPanelOpen(false)}
-        scriptContent={getCurrentContent()}
-      />
     </div>
   );
 };

@@ -1,14 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useScripts } from '@/hooks/useScripts';
 import { ScriptCard } from '@/components/ScriptCard';
 import { ScriptEditor } from '@/components/ScriptEditor';
 import { CreateScriptDialog } from '@/components/CreateScriptDialog';
 import { MoodboardPanel } from '@/components/MoodboardPanel';
-import { SplitScriptView } from '@/components/SplitScriptView';
-import { Search, FileText, LayoutGrid, Columns } from 'lucide-react';
+import { Search, FileText, ImagePlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
 const Index = () => {
   const {
@@ -17,6 +15,9 @@ const Index = () => {
     createScript,
     updateScript,
     deleteScript,
+    addMoodboardImage,
+    removeMoodboardImage,
+    moveScript,
     addPart,
     updatePart,
     deletePart,
@@ -27,13 +28,16 @@ const Index = () => {
 
   const [editingScriptId, setEditingScriptId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSplitView, setIsSplitView] = useState(false);
+  // null means "no upload requested yet" – avoids auto-popup when returning from script screen
+  const [moodboardUploadKey, setMoodboardUploadKey] = useState<number | null>(null);
 
   const editingScript = editingScriptId ? getScript(editingScriptId) : null;
 
-  const filteredScripts = scripts.filter(script =>
-    script.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredScripts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return scripts;
+    return scripts.filter((script) => script.title.toLowerCase().includes(q));
+  }, [scripts, searchQuery]);
 
   const handleCreate = (title: string, isMultiPart: boolean) => {
     const newScript = createScript(title, isMultiPart);
@@ -54,6 +58,8 @@ const Index = () => {
         script={editingScript}
         onBack={() => setEditingScriptId(null)}
         onUpdate={(updates) => updateScript(editingScript.id, updates)}
+        onAddMoodboardImage={(url) => addMoodboardImage(editingScript.id, url)}
+        onRemoveMoodboardImage={(url) => removeMoodboardImage(editingScript.id, url)}
         onAddPart={() => addPart(editingScript.id)}
         onUpdatePart={(partId, updates) => updatePart(editingScript.id, partId, updates)}
         onDeletePart={(partId) => deletePart(editingScript.id, partId)}
@@ -68,49 +74,51 @@ const Index = () => {
       {/* Header */}
       <header className="sticky top-0 z-10 glass border-b border-border/50">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold tracking-tight">Scripts</h1>
-                <p className="text-xs text-muted-foreground">
-                  {scripts.length} script{scripts.length !== 1 ? 's' : ''}
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-primary-foreground" />
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={isSplitView ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setIsSplitView(!isSplitView)}
-                className="gap-2"
-              >
-                {isSplitView ? (
-                  <>
-                    <LayoutGrid className="w-4 h-4" />
-                    Grid View
-                  </>
-                ) : (
-                  <>
-                    <Columns className="w-4 h-4" />
-                    Split View
-                  </>
-                )}
-              </Button>
-              <CreateScriptDialog onCreate={handleCreate} />
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight">Scripts</h1>
+              <p className="text-xs text-muted-foreground">
+                {scripts.length} script{scripts.length !== 1 ? 's' : ''}
+              </p>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content with Moodboard */}
-      <main className="max-w-[1600px] mx-auto px-6 py-8">
-        {scripts.length === 0 ? (
-          <ResizablePanelGroup direction="horizontal" className="min-h-[calc(100vh-160px)]">
-            <ResizablePanel defaultSize={70} minSize={50}>
-              <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in pr-6">
+      {/* Main Content (fixed split, no resizer) */}
+      <main className="py-0">
+        <div className="flex gap-0 min-h-[calc(100vh-80px)] w-full">
+          {/* Left: scripts */}
+          <section className="flex-1 min-w-0 pr-6 py-6 pl-6">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search scripts..."
+                  className="pl-10 bg-secondary/30 border-border/50 w-full"
+                />
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <CreateScriptDialog onCreate={handleCreate} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMoodboardUploadKey((k) => (k ?? 0) + 1)}
+                  className="gap-2"
+                >
+                  <ImagePlus className="w-4 h-4" />
+                  Add Images
+                </Button>
+              </div>
+            </div>
+
+            {scripts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
                 <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mb-6">
                   <FileText className="w-10 h-10 text-muted-foreground" />
                 </div>
@@ -120,64 +128,40 @@ const Index = () => {
                 </p>
                 <CreateScriptDialog onCreate={handleCreate} />
               </div>
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={30} minSize={20}>
-              <div className="h-full pl-4">
-                <MoodboardPanel />
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        ) : (
-          <ResizablePanelGroup direction="horizontal" className="min-h-[calc(100vh-160px)]">
-            <ResizablePanel defaultSize={70} minSize={50}>
-              <div className="space-y-6 pr-6">
-                {/* Search */}
-                <div className="relative max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search scripts..."
-                    className="pl-10 bg-secondary/30 border-border/50"
-                  />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 gap-4 w-full">
+                  {filteredScripts.map((script, index) => (
+                    <ScriptCard
+                      key={script.id}
+                      script={script}
+                      onClick={() => setEditingScriptId(script.id)}
+                      onDelete={() => deleteScript(script.id)}
+                      onMoveUp={index > 0 ? () => moveScript(script.id, 'up') : undefined}
+                      onMoveDown={index < filteredScripts.length - 1 ? () => moveScript(script.id, 'down') : undefined}
+                    />
+                  ))}
                 </div>
-
-                {/* Scripts Grid or Split View */}
-                {isSplitView ? (
-                  <SplitScriptView
-                    scripts={filteredScripts}
-                    onScriptClick={setEditingScriptId}
-                    onScriptDelete={deleteScript}
-                  />
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredScripts.map((script) => (
-                      <ScriptCard
-                        key={script.id}
-                        script={script}
-                        onClick={() => setEditingScriptId(script.id)}
-                        onDelete={() => deleteScript(script.id)}
-                      />
-                    ))}
-                  </div>
-                )}
 
                 {filteredScripts.length === 0 && searchQuery && (
                   <div className="text-center py-12 text-muted-foreground">
                     No scripts found matching "{searchQuery}"
                   </div>
                 )}
-              </div>
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={30} minSize={20}>
-              <div className="h-full pl-4">
-                <MoodboardPanel />
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        )}
+              </>
+            )}
+          </section>
+
+          {/* Right: moodboard */}
+          <aside className="flex-1 min-w-0 border-l border-border/50 py-0">
+            <div className="h-[calc(100vh-80px)]">
+              <MoodboardPanel
+                chrome="none"
+                uploadRequestKey={moodboardUploadKey}
+              />
+            </div>
+          </aside>
+        </div>
       </main>
     </div>
   );

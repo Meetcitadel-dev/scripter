@@ -20,15 +20,18 @@ interface InspirationPanelProps {
   onAdd: (inspiration: Omit<Inspiration, 'id'>) => void;
   onRemove: (id: string) => void;
   scriptId?: string;
+  /** Images from this script's project moodboard */
+  projectImages?: string[];
 }
 
-export const InspirationPanel = ({ inspirations, onAdd, onRemove, scriptId }: InspirationPanelProps) => {
+export const InspirationPanel = ({ inspirations, onAdd, onRemove, scriptId, projectImages = [] }: InspirationPanelProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [showMoodboard, setShowMoodboard] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddLink = () => {
@@ -225,7 +228,7 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove, scriptId }: In
                 </TabsContent>
                 <TabsContent value="moodboard" className="space-y-4 mt-4">
                   <p className="text-sm text-muted-foreground">
-                    Select an image from your general moodboard
+                    Select an image from your general or project moodboard
                   </p>
                   <Button 
                     variant="outline" 
@@ -233,8 +236,39 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove, scriptId }: In
                     className="w-full"
                   >
                     <Grid3X3 className="w-4 h-4 mr-2" />
-                    Open Moodboard
+                    Open General Moodboard
                   </Button>
+
+                  {projectImages.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        Or pick from this project's moodboard
+                      </p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {projectImages.map((url) => (
+                          <button
+                            key={url}
+                            type="button"
+                            onClick={() => {
+                              onAdd({ type: 'image', url });
+                              setIsOpen(false);
+                              toast.success('Image added from project moodboard');
+                            }}
+                            className="aspect-square border border-black bg-secondary/40 flex items-center justify-center"
+                          >
+                            <img
+                              src={url}
+                              alt="Project moodboard"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/placeholder.svg';
+                              }}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             )}
@@ -256,16 +290,20 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove, scriptId }: In
               className="group relative bg-secondary/50 rounded-lg overflow-hidden animate-scale-in"
             >
               {item.type === 'image' ? (
-                <div className="aspect-video">
+                <button
+                  type="button"
+                  onClick={() => setPreviewUrl(item.url)}
+                  className="w-full min-h-[80px] h-24 flex items-center justify-center bg-secondary/30 border border-black rounded-none"
+                >
                   <img
                     src={item.url}
                     alt="Inspiration"
-                    className="w-full h-full object-cover"
+                    className="max-w-full max-h-full w-auto h-auto object-contain"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = '/placeholder.svg';
                     }}
                   />
-                </div>
+                </button>
               ) : (
                 <a
                   href={item.url}
@@ -291,6 +329,22 @@ export const InspirationPanel = ({ inspirations, onAdd, onRemove, scriptId }: In
           ))}
         </div>
       )}
+
+      {/* Overlay preview */}
+      <Dialog open={!!previewUrl} onOpenChange={(open) => !open && setPreviewUrl(null)}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-2 flex items-center justify-center bg-background/95">
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className="max-w-full max-h-[85vh] w-auto h-auto object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/placeholder.svg';
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

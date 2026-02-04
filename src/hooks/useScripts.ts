@@ -44,6 +44,7 @@ export const useScripts = () => {
         inspirations: [],
       }] : undefined,
       moodboard: [],
+      soundtracks: [],
     };
     setScripts(prev => [newScript, ...prev]);
     return newScript;
@@ -61,6 +62,36 @@ export const useScripts = () => {
     setScripts(prev => prev.filter(script => script.id !== id));
   };
 
+  const moveScript = (id: string, direction: 'up' | 'down') => {
+    setScripts(prev => {
+      const index = prev.findIndex((s) => s.id === id);
+      if (index === -1) return prev;
+      const target = direction === 'up' ? index - 1 : index + 1;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.splice(target, 0, item);
+      return next;
+    });
+  };
+
+  const addMoodboardImage = (scriptId: string, url: string) => {
+    setScripts(prev => prev.map(script => {
+      if (script.id !== scriptId) return script;
+      const next = [...(script.moodboard || []), url];
+      // de-dupe while preserving order
+      const deduped = Array.from(new Set(next));
+      return { ...script, moodboard: deduped, updatedAt: new Date() };
+    }));
+  };
+
+  const removeMoodboardImage = (scriptId: string, url: string) => {
+    setScripts(prev => prev.map(script => {
+      if (script.id !== scriptId) return script;
+      return { ...script, moodboard: (script.moodboard || []).filter(u => u !== url), updatedAt: new Date() };
+    }));
+  };
+
   const addPart = (scriptId: string) => {
     setScripts(prev => prev.map(script => {
       if (script.id !== scriptId || !script.parts) return script;
@@ -68,6 +99,7 @@ export const useScripts = () => {
         id: generateId(),
         title: `Part ${script.parts.length + 1}`,
         content: '',
+        sceneDepiction: '',
         inspirations: [],
       };
       return {
@@ -168,6 +200,9 @@ export const useScripts = () => {
     createScript,
     updateScript,
     deleteScript,
+    moveScript,
+    addMoodboardImage,
+    removeMoodboardImage,
     addPart,
     updatePart,
     deletePart,

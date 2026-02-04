@@ -9,6 +9,8 @@ export interface ScriptPart {
   id: string;
   title: string;
   content: string;
+  /** Scene depiction (advanced mode) */
+  sceneDepiction?: string;
   inspirations: Inspiration[];
 }
 
@@ -25,11 +27,15 @@ export interface Script {
   parts?: ScriptPart[];
   // Preserved multi-part state when switching to single mode
   preservedParts?: ScriptPart[];
-  // Soundtrack for the script
+  // Soundtracks for the script (can play multiple at once)
+  soundtracks?: { url: string; name?: string }[];
+  // Back-compat (older scripts)
   soundtrackUrl?: string;
   soundtrackName?: string;
   // Project-specific moodboard images
   moodboard?: string[];
+  // Advanced mode: part boxes show scene depiction + dialogue
+  advancedMode?: boolean;
 }
 
 // Moodboard image type for the general moodboard
