@@ -73,13 +73,13 @@ const Index = () => {
     <div className="min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-10 glass border-b border-border/50">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
+        <div className="px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
               <FileText className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">Scripts</h1>
+              <h1 className="text-xl font-semibold tracking-tight">Scripter</h1>
               <p className="text-xs text-muted-foreground">
                 {scripts.length} script{scripts.length !== 1 ? 's' : ''}
               </p>
@@ -92,7 +92,7 @@ const Index = () => {
       <main className="py-0">
         <div className="flex gap-0 min-h-[calc(100vh-80px)] w-full">
           {/* Left: scripts */}
-          <section className="flex-1 min-w-0 pr-6 py-6 pl-6">
+          <section className="flex-1 min-w-0 px-6 py-6">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
